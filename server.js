@@ -18,7 +18,7 @@ const superadminRoutes = require("./routes/superadminRoutes");
 // Middleware
 app.use(cors({
   origin: [
-    "https://your-frontend-name.vercel.app",
+    "tte-frontend-seven.vercel.app",
     "http://localhost:5173" // for local testing
   ],
   credentials: true,
