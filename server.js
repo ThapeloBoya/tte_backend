@@ -16,8 +16,13 @@ const superadminRoutes = require("./routes/superadminRoutes");
 
 
 // Middleware
-app.use(cors());
-app.use(express.json());
+app.use(cors({
+  origin: [
+    "tte-frontend-seven.vercel.app",
+    "http://localhost:5173" // for local testing
+  ],
+  credentials: true,
+}));se(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Routes
