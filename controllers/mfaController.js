@@ -2,7 +2,7 @@ const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
-const { authenticator } = require("otplib");
+const totp = require("../utils/totp");
 const QRCode = require("qrcode");
 const { logAction } = require("../utils/auditLogger");
 
@@ -19,8 +19,8 @@ exports.generateSecret = async (req, res) => {
       return res.status(400).json({ message: "MFA is already enabled" });
     }
 
-    const secret = authenticator.generateSecret();
-    const otpauth = authenticator.keyuri(user.email, "TMS", secret);
+    const secret = totp.generateSecret();
+    const otpauth = totp.keyuri(user.email, "TMS", secret);
 
     user.mfaSecret = secret;
     await user.save();
@@ -44,7 +44,7 @@ exports.verifyAndEnable = async (req, res) => {
     if (!user.mfaSecret) return res.status(400).json({ message: "MFA not initialized. Generate a secret first." });
     if (user.mfaEnabled) return res.status(400).json({ message: "MFA is already enabled" });
 
-    const isValid = authenticator.check(token, user.mfaSecret);
+    const isValid = totp.verifyTOTP(token, user.mfaSecret);
     if (!isValid) return res.status(400).json({ message: "Invalid token. Please try again." });
 
     user.mfaEnabled = true;
@@ -123,7 +123,7 @@ exports.verifyMfaChallenge = async (req, res) => {
 
     if (!user) return res.status(400).json({ message: "Invalid or expired session" });
 
-    const isValid = authenticator.check(token, user.mfaSecret);
+    const isValid = totp.verifyTOTP(token, user.mfaSecret);
     if (!isValid) return res.status(400).json({ message: "Invalid verification code" });
 
     user.mfaVerified = true;

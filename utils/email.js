@@ -19,11 +19,11 @@ const sendEmail = async ({ to, subject, html }) => {
   const transporter = getTransporter();
 
   if (!transporter) {
-    console.log("============================================");
+    console.log("==");
     console.log(`EMAIL TO: ${to}`);
     console.log(`SUBJECT: ${subject}`);
     console.log(`BODY:\n${html.replace(/<[^>]*>/g, "")}`);
-    console.log("============================================");
+    console.log("==");
     console.log("No SMTP configured. Email logged to console.");
     return { messageId: "console-only" };
   }

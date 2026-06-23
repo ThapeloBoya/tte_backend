@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 const express = require("express");
 const router = express.Router();
 const passport = require("../config/passport");
@@ -56,16 +56,5 @@ router.get("/microsoft", passport.authenticate("microsoft", { session: false }))
 router.get("/microsoft/callback", passport.authenticate("microsoft", { session: false, failureRedirect: `${process.env.FRONTEND_URL || "http://localhost:3000"}/login?error=oauth_failed` }), microsoftCallback);
 
 module.exports = router;
-=======
-const express = require("express");
-const router = express.Router();
-const { register, login } = require("../controllers/authController");
 
-// Register a new user → Only superadmin can do this
-router.post("/register", register);
 
-// Login
-router.post("/login", login);
-
-module.exports = router;
->>>>>>> 55959f3276306c10d1f85d755c132fda848ed0a1

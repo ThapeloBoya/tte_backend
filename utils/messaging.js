@@ -23,10 +23,10 @@ const sendSMS = async ({ to, body }) => {
   }
 
   if (!client) {
-    console.log("============================================");
+    console.log("==");
     console.log(`SMS TO: ${normalized}`);
     console.log(`BODY: ${body}`);
-    console.log("============================================");
+    console.log("==");
     console.log("No Twilio configured. Message logged to console.");
     return { sid: "console-only" };
   }
@@ -50,10 +50,10 @@ const sendWhatsApp = async ({ to, body }) => {
   }
 
   if (!client) {
-    console.log("============================================");
+    console.log("==");
     console.log(`WHATSAPP TO: ${normalized}`);
     console.log(`BODY: ${body}`);
-    console.log("============================================");
+    console.log("==");
     console.log("No Twilio configured. Message logged to console.");
     return { sid: "console-only" };
   }

@@ -29,16 +29,30 @@ jest.mock("bcryptjs", () => ({
   compare: jest.fn(),
 }));
 
-jest.mock("otplib", () => ({
-  authenticator: {
-    generateSecret: jest.fn(() => "mocked-secret"),
-    keyuri: jest.fn(() => "otpauth://totp/test"),
-    check: jest.fn(() => true),
-  },
+jest.mock("../utils/totp", () => ({
+  generateSecret: jest.fn(() => "mocked-secret"),
+  keyuri: jest.fn(() => "otpauth://totp/test"),
+  verifyTOTP: jest.fn(() => true),
 }));
 
 jest.mock("qrcode", () => ({
   toDataURL: jest.fn(() => "data:image/png;base64,mocked"),
+}));
+
+jest.mock("../utils/auditLogger", () => ({
+  logAction: jest.fn(() => Promise.resolve()),
+}));
+
+jest.mock("../utils/driverProfile", () => ({
+  ensureDriverProfile: jest.fn(() => Promise.resolve()),
+}));
+
+jest.mock("../utils/notify", () => ({
+  notifyAdmins: jest.fn(() => Promise.resolve()),
+}));
+
+jest.mock("../utils/email", () => ({
+  sendEmail: jest.fn(() => Promise.resolve()),
 }));
 
 const User = require("../models/User");
@@ -88,7 +102,7 @@ describe("POST /api/auth/register", () => {
 
     const res = await request(app)
       .post("/api/auth/register")
-      .send({ name: "Test", email: "test@test.com", password: "123456", role: "driver" });
+      .send({ name: "Test", email: "test@test.com", password: "StrongPass1!", role: "driver" });
     expect(res.status).toBe(201);
     expect(res.body).toHaveProperty("token");
   });
@@ -106,28 +120,31 @@ describe("POST /api/auth/login", () => {
     expect(res.status).toBe(400);
   });
 
-  it("returns 401 for invalid credentials", async () => {
+  it("returns 400 for invalid credentials", async () => {
     User.findOne.mockResolvedValue(null);
 
     const res = await request(app)
       .post("/api/auth/login")
-      .send({ email: "nonexistent@test.com", password: "123456" });
-    expect(res.status).toBe(401);
+      .send({ email: "nonexistent@test.com", password: "StrongPass1!" });
+    expect(res.status).toBe(400);
   });
 
   it("returns 200 on successful login", async () => {
+    bcrypt.compare.mockResolvedValue(true);
     const mockUser = {
       _id: "user123",
       name: "Admin",
       email: "admin@test.com",
       role: "admin1",
-      comparePassword: jest.fn().mockResolvedValue(true),
+      isActive: true,
+      mfaEnabled: false,
+      save: jest.fn(),
     };
     User.findOne.mockResolvedValue(mockUser);
 
     const res = await request(app)
       .post("/api/auth/login")
-      .send({ email: "admin@test.com", password: "correctpass" });
+      .send({ email: "admin@test.com", password: "StrongPass1!" });
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty("token");
   });

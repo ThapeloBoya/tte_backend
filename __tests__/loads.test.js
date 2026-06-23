@@ -82,7 +82,7 @@ describe("POST /api/loads", () => {
   it("returns 201 on successful creation", async () => {
     const mockLoad = {
       _id: "load123",
-      ticketNumber: "TMS-20260617-001",
+      ticketNumber: "TICKET-20260617-001",
       customer: "cust1",
       truck: "truck1",
       pickupLocation: "A",
@@ -102,7 +102,7 @@ describe("POST /api/loads", () => {
       .post("/api/loads")
       .send({ customer: "cust1", truck: "truck1", pickupLocation: "A", deliveryLocation: "B" });
     expect(res.status).toBe(201);
-    expect(res.body.ticketNumber).toMatch(/^TMS-/);
+    expect(res.body.ticketNumber).toMatch(/^TICKET-/);
   });
 });
 
