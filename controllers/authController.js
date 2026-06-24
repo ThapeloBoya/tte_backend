@@ -8,111 +8,12 @@ const { ensureDriverProfile } = require("../utils/driverProfile");
 const { sendEmail } = require("../utils/email");
 const { logAction } = require("../utils/auditLogger");
 const { notifyAdmins } = require("../utils/notify");
+const { validatePassword } = require("../utils/password");
 
 const SALT_ROUNDS = 12;
 
-// Common password blocklist (top 1000 most common)
-const COMMON_PASSWORDS = new Set([
-  "123456","password","12345678","qwerty","123456789","12345","1234","111111","1234567",
-  "sunshine","qwerty123","iloveyou","princess","admin","welcome","666666","abc123",
-  "football","123123","monkey","dragon","michael","shadow","master","jennifer",
-  "passw0rd","trustno1","ranger","buster","thomas","tigger","robert","samsung",
-  "access","loveme","fuckme","batman","andrew","hunter","asshole","ashley","121212",
-  "chelsea","michelle","jordan","superman","maggie","jessica","pepper","joshua",
-  "matthew","andrea","james","jessie","fender","flash","marley","sparky","jake",
-  "sophie","midnight","thunder","harley","fishing","orlando","compaq","dallas",
-  "maxwell","tracey","desiree","ncc1701","slayer","scarface","qwertyuiop","123321",
-  "passion","jordan23","buffalo","diablo","tinkle","tanker","thx1138","rhonda",
-  "zxcvbn","starwars","killer","hockey","george","andrea","matthew","jessica",
-  "charlie","silver","thunder","midnight","martin","buster","merlin","marina",
-  "alexis","scorpio","napoleon","hotdog","cookie","johnson","crystal","charlie",
-  "fender","cowboy","dakota","midnight","thunder","compton","scooter","winter",
-  "spider","miller","cameron","snapper","samson","raymond","richard","gabriel",
-  "jaguar","johanna","william","julian","brandon","anthony","alexander","daniel",
-  "david","george","jason","james","joseph","kyle","matthew","nicholas","robert",
-  "ryan","samuel","stephen","thomas","timothy","tyler","william","amber","andrea",
-  "angela","anna","ashley","brittany","christina","courtney","danielle","elizabeth",
-  "emily","heather","jacqueline","jennifer","jessica","kimberly","lauren","lindsay",
-  "lisa","mary","megan","michelle","nicole","rachel","rebecca","samantha","sarah",
-  "stephanie","taylor","victoria","amanda","april","bridget","carolyn","catherine",
-  "christine","diana","elaine","gail","heidi","irene","janet","jill","joan","judy",
-  "karen","kathy","kristen","laura","linda","lori","lynn","marcia","maria","marie",
-  "martha","nancy","nina","pamela","patricia","paula","phyllis","robin","sandra",
-  "sharon","sherry","susan","tammy","tracy","valerie","veronica","vicki","vicky",
-  "wendy","yvonne","aaron","adam","adrian","alan","albert","alex","allen","andre",
-  "arthur","barry","benjamin","billy","bobby","brad","brett","brian","bruce",
-  "bryan","byron","caleb","calvin","carl","carlos","casey","cedric","chad","chris",
-  "clarence","clayton","clifford","clyde","colin","corey","cornelius","craig",
-  "curtis","dale","damian","damien","dana","darren","darryl","daryl","dean","dennis",
-  "derek","derrick","dewayne","don","donald","douglas","dustin","dwayne","earl",
-  "eddie","edgar","edward","edwin","elijah","elliot","elmer","emanuel","eric","erik",
-  "ernest","eugene","evan","everett","felipe","felix","fernando","floyd","francis",
-  "frank","franklin","fred","freddie","frederick","gabriel","garrett","gary","gavin",
-  "gene","geoffrey","gerald","gerard","gilbert","glen","glenn","gonzalo","gordon",
-  "graham","grant","greg","gregory","guillermo","gustavo","hans","harold","harry",
-  "harvey","hector","henry","herbert","herman","homer","horace","howard","hugh",
-  "hugo","ian","ignacio","ivan","jack","jackie","jacob","jaime","jake","jalen",
-  "jamal","jamaal","jamel","jamie","jamison","jan","jarred","jarrod","jarvis",
-  "javier","jay","jaymes","jaylen","jean","jedidiah","jeff","jeffery","jeffrey",
-  "jeremiah","jeremy","jermaine","jerome","jerry","jesse","jesus","jim","jimmy",
-  "joaquin","jody","joe","joel","johnathan","johnathon","johnny","jon","jonah",
-  "jonas","jonathan","jonathon","jordan","jordyn","jorge","jose","josef","joseph",
-  "josh","joshua","juan","julian","julio","julius","justin","kareem","karl",
-  "kasey","keith","kelvin","ken","kendall","kendrick","kenneth","kenny","keon",
-  "kevin","khalil","kirk","kristian","kristofer","kristopher","kurt","kyle",
-  "lamar","lance","larry","laurence","lawrence","leandro","lee","leo","leon",
-  "leonard","leonardo","leonel","leroy","leslie","lester","levi","lewis","lionel",
-  "lloyd","logan","lonnie","loren","lorenzo","louie","louis","lowell","lucas",
-  "luke","marc","marcus","marion","mark","markus","marquis","marshall","martin",
-  "marty","marvin","mason","mateo","mathew","matt","matthew","maurice","mauricio",
-  "max","maxwell","maynard","mckinley","melvin","michael","michal","miguel",
-  "mike","milton","mitchell","mohammad","mohammed","moises","monte","monty",
-  "morgan","morris","moses","muhammad","myles","nathan","nathaniel","neal",
-  "nelson","nestor","neville","nick","nickolas","nicolas","nigel","noah","noel",
-  "nolan","norman","norris","oliver","omar","orlando","orville","oscar","owen",
-  "pablo","patrick","paul","pedro","percy","perry","pete","peter","philip",
-  "phillip","pierre","preston","quinton","rafael","raleigh","ralph","ramiro",
-  "ramon","randal","randall","randolph","randy","raphael","rashad","raul","ray",
-  "raymon","raymond","reggie","reginald","reid","reuben","rex","reyes","reynaldo",
-  "rhett","ricardo","rich","richard","ricky","rico","riley","rob","robbie",
-  "robert","roberto","rodney","rodolfo","rodrigo","rogelio","roger","roland",
-  "rolando","roman","ron","ronald","ronnie","rosa","roscoe","ross","roy","royal",
-  "ruben","rudy","russell","ryan","salvador","salvatore","sam","sammy","samuel",
-  "sandy","santiago","santos","saul","scot","scott","sean","sebastian","sedrick",
-  "serge","sergio","seth","seymour","shane","shannon","shaun","shawn","shayne",
-  "shelby","sheldon","sherman","sidney","silas","simon","solomon","spencer",
-  "stan","stanley","stefan","stephan","stephen","sterling","steve","steven",
-  "stewart","stuart","sylvester","tad","talbot","tanner","tate","taylor","ted",
-  "teddy","terence","terrance","terrell","terrence","terry","tevin","thad",
-  "theo","theodore","thomas","tim","timmy","timothy","tobias","toby","tod",
-  "todd","tom","tomas","tommy","tony","tracy","travis","trent","trenton",
-  "trevor","trey","tristan","troy","truman","tucker","ty","tyler","tyree",
-  "tyrell","tyrone","tyshawn","tyson","ulysses","vance","vernon","vicente",
-  "victor","vincent","vince","virgil","virgilio","vito","vladimir","wade",
-  "walker","wallace","walter","ward","warren","wayne","weldon","wendell",
-  "wesley","weston","wilbert","wilbur","wilfred","wilfredo","wilhelm","will",
-  "willard","william","willie","willis","winston","wyatt","xavier","zachary",
-  "zachery","zack","zackary","zackery","zane","zollie","pass","pass123","pass1234",
-  "qwerty1","qwerty12","qwerty1234","qwerty12345","abc1234","abc12345","abc123456",
-  "letmein","welcome1","admin123","test123","test","temp123","changeme","default",
-  "123qwe","qwe123","1q2w3e4r","12qwaszx","zaqxsw","xsw2zaq1","qawsedrf",
-  "password1","password12","password123","password1234","passw0rd","p@ssword",
-  "p@ssw0rd","qwerty12345","Qwerty123","Password1","Password123",
-]);
-
-// Generate JWT
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "1d" });
-};
-
-const validatePassword = (password) => {
-  if (!password || password.length < 9) return "Password must be at least 9 characters.";
-  if (!/[a-z]/.test(password)) return "Password must contain at least one lowercase letter.";
-  if (!/[A-Z]/.test(password)) return "Password must contain at least one uppercase letter.";
-  if (!/[0-9]/.test(password)) return "Password must contain at least one number.";
-  if (!/[^a-zA-Z0-9]/.test(password)) return "Password must contain at least one special character.";
-  if (COMMON_PASSWORDS.has(password.toLowerCase())) return "Password is too common. Please choose a different one.";
-  return null;
 };
 
 // Register new user
@@ -182,8 +83,25 @@ exports.login = async (req, res) => {
 
     if (!user.isActive) return res.status(403).json({ message: "Account is deactivated. Contact your administrator." });
 
+    if (user.lockUntil && user.lockUntil > new Date()) {
+      const remaining = Math.ceil((user.lockUntil - new Date()) / 1000 / 60);
+      return res.status(429).json({ message: `Account temporarily locked. Try again in ${remaining} minute(s).` });
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
+    if (!isMatch) {
+      user.loginAttempts = (user.loginAttempts || 0) + 1;
+      if (user.loginAttempts >= 5) {
+        user.lockUntil = new Date(Date.now() + 15 * 60 * 1000);
+        user.loginAttempts = 0;
+      }
+      await user.save();
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    user.loginAttempts = 0;
+    user.lockUntil = null;
+    await user.save();
 
     await logAction({
       action: "login", entity: "User", entityId: user._id, req,

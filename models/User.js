@@ -17,6 +17,8 @@ const userSchema = new mongoose.Schema({
   googleId: { type: String },
   microsoftId: { type: String },
   mfaRecoveryCodes: [{ type: String }],
+  loginAttempts: { type: Number, default: 0 },
+  lockUntil: { type: Date, default: null },
 }, { timestamps: true });
 
 userSchema.plugin(softDelete);

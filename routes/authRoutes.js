@@ -1,6 +1,7 @@
 
 const express = require("express");
 const router = express.Router();
+const rateLimit = require("express-rate-limit");
 const passport = require("../config/passport");
 const { register, login, forgotPassword, resetPassword, changePassword } = require("../controllers/authController");
 const { protect, authorize } = require("../middleware/authMiddleware");
@@ -15,6 +16,12 @@ const {
 } = require("../controllers/mfaController");
 const { googleCallback, microsoftCallback } = require("../controllers/oauthController");
 
+const loginLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  message: { message: "Too many login attempts. Please try again later." },
+});
+
 // Register — public (driver only) or protected (admins choose role)
 router.post("/register", (req, res, next) => {
   if (req.headers.authorization) {
@@ -24,7 +31,7 @@ router.post("/register", (req, res, next) => {
 }, register);
 
 // Login
-router.post("/login", login);
+router.post("/login", loginLimiter, login);
 
 // Forgot password
 router.post("/forgot-password", forgotPassword);

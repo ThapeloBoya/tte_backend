@@ -233,6 +233,7 @@ ${load.podUrl ? `<p><a href="${process.env.BACKEND_URL || "http://localhost:5000
 
     const io = getIO();
     if (io) io.emit("loadUpdated", populatedLoad);
+    if (io) io.emit("podUploaded", { loadId: load._id, ticketNumber: load.ticketNumber });
 
     res.json({ message: "POD uploaded successfully", load: populatedLoad });
   } catch (err) {

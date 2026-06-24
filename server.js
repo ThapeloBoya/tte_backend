@@ -32,8 +32,8 @@ if (!process.env.JWT_SECRET || !process.env.MONGO_URI) {
 app.use(cors({
   origin: [
     "http://localhost:3000",
-    "https://tte-frontend-seven.vercel.app"
-  ],
+    process.env.FRONTEND_URL || "https://tte-frontend-seven.vercel.app"
+  ].filter(Boolean),
   credentials: true
 }));
 
@@ -49,7 +49,8 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use(session({
   secret: process.env.JWT_SECRET,
   resave: false,
-  saveUninitialized: false
+  saveUninitialized: false,
+  cookie: { sameSite: "lax" }
 }));
 
 app.use(passport.initialize());
@@ -134,10 +135,16 @@ app.use("/api/driver-loads", require("./routes/driverLoads"));
 app.use("/api/users", require("./routes/users"));
 app.use("/api/admin2", require("./routes/admin2"));
 app.use("/api/superadmin", require("./routes/superadminRoutes"));
+app.use("/api/contact", require("./routes/contactRoutes"));
 
 // ---------------- HEALTH ----------------
 app.get("/api/health", (req, res) => {
   res.json({ status: "OK" });
+});
+
+// ---------------- 404 for unknown API routes ----------------
+app.use("/api/*", (req, res) => {
+  res.status(404).json({ message: "API route not found" });
 });
 
 // ---------------- ERROR HANDLER ----------------

@@ -258,6 +258,7 @@ exports.uploadPOD = async (req, res) => {
 
     const io = getIO();
     if (io) io.emit("loadUpdated", populatedLoad);
+    if (io) io.emit("podUploaded", { loadId: load._id, ticketNumber: load.ticketNumber });
 
     await logAction({
       action: "pod_uploaded", entity: "Load", entityId: load._id, req,
