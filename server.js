@@ -13,6 +13,7 @@ const { Server } = require("socket.io");
 const path = require("path");
 const fileUpload = require("express-fileupload");
 const session = require("express-session");
+const MongoStore = require("connect-mongo");
 const passport = require("./config/passport");
 const swaggerJsdoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
@@ -50,6 +51,7 @@ app.use(session({
   secret: process.env.JWT_SECRET,
   resave: false,
   saveUninitialized: false,
+  store: MongoStore.create({ mongoUrl: process.env.MONGO_URI }),
   cookie: { sameSite: "lax" }
 }));
 
@@ -143,7 +145,7 @@ app.get("/api/health", (req, res) => {
 });
 
 // ---------------- 404 for unknown API routes ----------------
-app.use("/api/*", (req, res) => {
+app.use("/api/{*path}", (req, res) => {
   res.status(404).json({ message: "API route not found" });
 });
 
