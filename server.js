@@ -144,8 +144,11 @@ app.get("/api/health", (req, res) => {
 });
 
 // ---------------- 404 for unknown API routes ----------------
-app.use("/api/{*path}", (req, res) => {
-  res.status(404).json({ message: "API route not found" });
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api/")) {
+    return res.status(404).json({ message: "API route not found" });
+  }
+  next();
 });
 
 // ---------------- ERROR HANDLER ----------------
