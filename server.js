@@ -43,11 +43,17 @@ const corsCheck = (origin, cb) => {
 // Manual CORS headers (guaranteed to run before any route)
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  if (origin && allowedOrigins.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Access-Control-Allow-Credentials", "true");
-    res.setHeader("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  if (origin) {
+    const normalizedOrigin = origin.replace(/\/+$/, '');
+    const allowed = allowedOrigins.some(a => a.replace(/\/+$/, '') === normalizedOrigin);
+    if (allowed) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+      res.setHeader("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    } else {
+      console.log("CORS DEBUG: origin='%s' | allowed=%j", origin, allowedOrigins);
+    }
   }
   if (req.method === "OPTIONS") return res.status(204).end();
   next();
