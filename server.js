@@ -32,8 +32,8 @@ if (!process.env.JWT_SECRET || !process.env.MONGO_URI) {
 // ---------------- ALLOWED ORIGINS ----------------
 const allowedOrigins = [
   "http://localhost:3000",
-  process.env.FRONTEND_URL
-].filter(Boolean);
+  process.env.FRONTEND_URL || "https://tte-frontend-seven.vercel.app"
+];
 
 const corsCheck = (origin, cb) => {
   if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
