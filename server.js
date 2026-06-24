@@ -29,14 +29,19 @@ if (!process.env.JWT_SECRET || !process.env.MONGO_URI) {
   process.exit(1);
 }
 
+// ---------------- ALLOWED ORIGINS ----------------
+const allowedOrigins = [
+  "http://localhost:3000",
+  process.env.FRONTEND_URL
+].filter(Boolean);
+
+const corsCheck = (origin, cb) => {
+  if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+  cb(null, false);
+};
+
 // ---------------- BASIC MIDDLEWARE ----------------
-app.use(cors({
-  origin: [
-    "http://localhost:3000",
-    process.env.FRONTEND_URL || "https://tte-frontend-seven.vercel.app"
-  ].filter(Boolean),
-  credentials: true
-}));
+app.use(cors({ origin: corsCheck, credentials: true }));
 
 app.use(helmet());
 app.use(morgan("short"));
@@ -95,13 +100,7 @@ app.use(sanitizeMiddleware());
 
 // ---------------- SOCKET.IO ----------------
 const io = new Server(server, {
-  cors: {
-    origin: [
-      "http://localhost:3000",
-      "https://tte-frontend-seven.vercel.app"
-    ],
-    credentials: true
-  }
+  cors: { origin: corsCheck, credentials: true }
 });
 
 app.set("io", io);
