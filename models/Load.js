@@ -74,6 +74,8 @@ const loadSchema = new mongoose.Schema({
   routePolyline: String,
 
   podUrl: { type: String },
+  capturedPhotoUrl: { type: String },
+  signatureUrl: { type: String },
 
   isApproved: { type: Boolean, default: false },
   reviewStatus: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },

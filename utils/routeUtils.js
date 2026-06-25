@@ -64,7 +64,10 @@ const cleanAddress = (query) => {
 const getFallbackQueries = (query) => {
   const parts = query.split(',').map(s => s.trim()).filter(Boolean);
   const fallbacks = [];
+  if (parts.length >= 3) fallbacks.push(parts.slice(-3).join(', '));
   if (parts.length >= 2) fallbacks.push(parts.slice(-2).join(', '));
+  if (parts.length >= 3) fallbacks.push(parts.slice(-3, -1).join(', '));
+  if (parts.length >= 4) fallbacks.push([parts[0].replace(/^\d+\s+/, ''), parts[parts.length - 2]].join(', '));
   if (parts.length >= 1) fallbacks.push(parts[parts.length - 1]);
   return fallbacks;
 };
@@ -73,7 +76,7 @@ const geocodeNominatim = async (query) => {
   if (!query) return null;
   const tryGeocode = async (q) => {
     try {
-      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`;
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1&countrycodes=za`;
       const res = await fetch(url, { headers: { "User-Agent": "TMS/1.0" } });
       const data = await res.json();
       if (!data?.length) return null;

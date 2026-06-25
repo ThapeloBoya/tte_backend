@@ -63,35 +63,35 @@ exports.approveLoad = async (req, res) => {
       metadata: { note: note || "" }
     });
 
+    const io = getIO();
+    if (io) io.emit("loadUpdated", populatedLoad);
+
+    res.json(populatedLoad);
+
     if (populatedLoad.driver?.email) {
-      await notifyDriver(populatedLoad.driver.email, {
+      notifyDriver(populatedLoad.driver.email, {
         title: "Load Approved",
         message: `Your load ${load.ticketNumber} has been approved.`,
         entity: "Load",
         entityId: load._id,
         action: "approved"
-      });
+      }).catch(() => {});
     }
 
     if (populatedLoad.driver?.phone) {
-      await sendWhatsApp({
+      sendWhatsApp({
         to: populatedLoad.driver.phone,
         body: `Load ${load.ticketNumber} has been approved.`
-      });
+      }).catch(() => {});
     }
 
-    await notifyAdmins({
+    notifyAdmins({
       title: "Load Approved",
       message: `Load ${populatedLoad.ticketNumber} approved by ${req.user?.name}`,
       entity: "Load",
       entityId: load._id,
       action: "approved"
-    });
-
-    const io = getIO();
-    if (io) io.emit("loadUpdated", populatedLoad);
-
-    res.json(populatedLoad);
+    }).catch(() => {});
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Failed to approve load" });
@@ -142,35 +142,35 @@ exports.rejectLoad = async (req, res) => {
       metadata: { reason: reason.trim() }
     });
 
+    const io = getIO();
+    if (io) io.emit("loadUpdated", populatedLoad);
+
+    res.json(populatedLoad);
+
     if (populatedLoad.driver?.email) {
-      await notifyDriver(populatedLoad.driver.email, {
+      notifyDriver(populatedLoad.driver.email, {
         title: "Load Rejected",
         message: `Load ${load.ticketNumber} needs rework: ${reason.trim()}`,
         entity: "Load",
         entityId: load._id,
         action: "rejected"
-      });
+      }).catch(() => {});
     }
 
     if (populatedLoad.driver?.phone) {
-      await sendWhatsApp({
+      sendWhatsApp({
         to: populatedLoad.driver.phone,
         body: `Load ${load.ticketNumber} needs rework: ${reason.trim()}`
-      });
+      }).catch(() => {});
     }
 
-    await notifyAdmins({
+    notifyAdmins({
       title: "Load Rejected",
       message: `Load ${populatedLoad.ticketNumber} rejected by ${req.user?.name}`,
       entity: "Load",
       entityId: load._id,
       action: "rejected"
-    });
-
-    const io = getIO();
-    if (io) io.emit("loadUpdated", populatedLoad);
-
-    res.json(populatedLoad);
+    }).catch(() => {});
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Failed to reject load" });

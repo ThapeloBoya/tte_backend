@@ -127,22 +127,26 @@ router.patch("/:id", protect, authorize("driver"), async (req, res) => {
         entity: "Load", entityId: load._id, action: "status_updated",
       });
 
-      if (populatedLoad?.customer?.email) {
-        await sendEmail({
-          to: populatedLoad.customer.email,
-          subject: `Your shipment ${load.ticketNumber} is in transit`,
-          html: `<p>Hi ${populatedLoad.customer.name},</p>
+      try {
+        if (populatedLoad?.customer?.email) {
+          await sendEmail({
+            to: populatedLoad.customer.email,
+            subject: `Your shipment ${load.ticketNumber} is in transit`,
+            html: `<p>Hi ${populatedLoad.customer.name},</p>
 <p>Your shipment <strong>${load.ticketNumber}</strong> is now in transit.</p>
 <p><strong>From:</strong> ${load.pickupLocation}</p>
 <p><strong>To:</strong> ${load.deliveryLocation}</p>
 <p>Track your shipment: <a href="${process.env.FRONTEND_URL || "http://localhost:3000"}/track/${load.ticketNumber}">${process.env.FRONTEND_URL || "http://localhost:3000"}/track/${load.ticketNumber}</a></p>`,
-        });
-      }
-      if (populatedLoad?.customer?.phone) {
-        await sendSMS({
-          to: populatedLoad.customer.phone,
-          body: `Your shipment ${load.ticketNumber} is in transit! From: ${load.pickupLocation} To: ${load.deliveryLocation}. Track: ${process.env.FRONTEND_URL || "http://localhost:3000"}/track/${load.ticketNumber}`,
-        });
+          });
+        }
+        if (populatedLoad?.customer?.phone) {
+          await sendSMS({
+            to: populatedLoad.customer.phone,
+            body: `Your shipment ${load.ticketNumber} is in transit! From: ${load.pickupLocation} To: ${load.deliveryLocation}. Track: ${process.env.FRONTEND_URL || "http://localhost:3000"}/track/${load.ticketNumber}`,
+          });
+        }
+      } catch (notifErr) {
+        console.error("Notification error (non-fatal):", notifErr.message);
       }
     }
 
@@ -153,8 +157,7 @@ router.patch("/:id", protect, authorize("driver"), async (req, res) => {
     
   } catch (err) {
     console.error("Error updating load:", err);
-    
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error", detail: err.message });
   }
 });
 
@@ -212,23 +215,27 @@ router.post("/:id/pod", protect, authorize("driver"), async (req, res) => {
       entity: "Load", entityId: load._id, action: "pod_uploaded",
     });
 
-    if (populatedLoad?.customer?.email) {
-      await sendEmail({
-        to: populatedLoad.customer.email,
-        subject: `Your shipment ${load.ticketNumber} has been delivered`,
-        html: `<p>Hi ${populatedLoad.customer.name},</p>
+    try {
+      if (populatedLoad?.customer?.email) {
+        await sendEmail({
+          to: populatedLoad.customer.email,
+          subject: `Your shipment ${load.ticketNumber} has been delivered`,
+          html: `<p>Hi ${populatedLoad.customer.name},</p>
 <p>Your shipment <strong>${load.ticketNumber}</strong> has been delivered.</p>
 <p><strong>From:</strong> ${load.pickupLocation}</p>
 <p><strong>To:</strong> ${load.deliveryLocation}</p>
 ${load.podUrl ? `<p><a href="${process.env.BACKEND_URL || "http://localhost:5000"}${load.podUrl}">View Proof of Delivery</a></p>` : ""}
 <p>Thank you for shipping with us.</p>`,
-      });
-    }
-    if (populatedLoad?.customer?.phone) {
-      await sendSMS({
-        to: populatedLoad.customer.phone,
-        body: `Your shipment ${load.ticketNumber} has been delivered! Track: ${process.env.FRONTEND_URL || "http://localhost:3000"}/track/${load.ticketNumber}. Thank you for shipping with us.`,
-      });
+        });
+      }
+      if (populatedLoad?.customer?.phone) {
+        await sendSMS({
+          to: populatedLoad.customer.phone,
+          body: `Your shipment ${load.ticketNumber} has been delivered! Track: ${process.env.FRONTEND_URL || "http://localhost:3000"}/track/${load.ticketNumber}. Thank you for shipping with us.`,
+        });
+      }
+    } catch (notifErr) {
+      console.error("POD notification error (non-fatal):", notifErr.message);
     }
 
     const io = getIO();
@@ -238,6 +245,68 @@ ${load.podUrl ? `<p><a href="${process.env.BACKEND_URL || "http://localhost:5000
     res.json({ message: "POD uploaded successfully", load: populatedLoad });
   } catch (err) {
     console.error("Error uploading driver POD:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.post("/:id/photo", protect, authorize("driver"), async (req, res) => {
+  try {
+    if (!req.files || !req.files.photo) {
+      return res.status(400).json({ message: "No photo uploaded" });
+    }
+
+    const file = req.files.photo;
+    const validationError = validatePODFile(file);
+    if (validationError) return res.status(400).json({ message: validationError });
+
+    const driver = await ensureDriverProfile(req.user);
+    if (!driver) return res.status(404).json({ message: "Driver not found" });
+
+    const load = await Load.findOne({ _id: req.params.id, driver: driver._id });
+    if (!load) return res.status(404).json({ message: "Load not found" });
+
+    const filename = createSafePODFilename(load, `photo-${file.name}`);
+    const uploadPath = path.join(__dirname, "../uploads", filename);
+    await file.mv(uploadPath);
+
+    load.capturedPhotoUrl = `/uploads/${filename}`;
+    load.updatedBy = req.user.email;
+    await load.save();
+
+    res.json({ message: "Photo saved", capturedPhotoUrl: load.capturedPhotoUrl });
+  } catch (err) {
+    console.error("Error uploading photo:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.post("/:id/signature", protect, authorize("driver"), async (req, res) => {
+  try {
+    if (!req.files || !req.files.signature) {
+      return res.status(400).json({ message: "No signature uploaded" });
+    }
+
+    const file = req.files.signature;
+    const validationError = validatePODFile(file);
+    if (validationError) return res.status(400).json({ message: validationError });
+
+    const driver = await ensureDriverProfile(req.user);
+    if (!driver) return res.status(404).json({ message: "Driver not found" });
+
+    const load = await Load.findOne({ _id: req.params.id, driver: driver._id });
+    if (!load) return res.status(404).json({ message: "Load not found" });
+
+    const filename = createSafePODFilename(load, `signature-${file.name}`);
+    const uploadPath = path.join(__dirname, "../uploads", filename);
+    await file.mv(uploadPath);
+
+    load.signatureUrl = `/uploads/${filename}`;
+    load.updatedBy = req.user.email;
+    await load.save();
+
+    res.json({ message: "Signature saved", signatureUrl: load.signatureUrl });
+  } catch (err) {
+    console.error("Error saving signature:", err);
     res.status(500).json({ message: "Server error" });
   }
 });

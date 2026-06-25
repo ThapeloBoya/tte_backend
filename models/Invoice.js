@@ -43,6 +43,7 @@ const invoiceSchema = new mongoose.Schema({
   paidDate: { type: Date },
 
   notes: String,
+  pdfUrl: { type: String },
   paymentMethod: String,
   paymentReference: String,
 

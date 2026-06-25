@@ -271,23 +271,27 @@ exports.uploadPOD = async (req, res) => {
       entity: "Load", entityId: load._id, action: "pod_uploaded",
     });
 
-    if (populatedLoad?.customer?.email) {
-      await sendEmail({
-        to: populatedLoad.customer.email,
-        subject: `Your shipment ${load.ticketNumber} has been delivered`,
-        html: `<p>Hi ${populatedLoad.customer.name},</p>
+    try {
+      if (populatedLoad?.customer?.email) {
+        await sendEmail({
+          to: populatedLoad.customer.email,
+          subject: `Your shipment ${load.ticketNumber} has been delivered`,
+          html: `<p>Hi ${populatedLoad.customer.name},</p>
 <p>Your shipment <strong>${load.ticketNumber}</strong> has been delivered.</p>
 <p><strong>From:</strong> ${load.pickupLocation}</p>
 <p><strong>To:</strong> ${load.deliveryLocation}</p>
 ${load.podUrl ? `<p><a href="${process.env.BACKEND_URL || "http://localhost:5000"}${load.podUrl}">View Proof of Delivery</a></p>` : ""}
 <p>Thank you for shipping with us.</p>`,
-      });
-    }
-    if (populatedLoad?.customer?.phone) {
-      await sendSMS({
-        to: populatedLoad.customer.phone,
-        body: `Your shipment ${load.ticketNumber} has been delivered! From: ${load.pickupLocation} To: ${load.deliveryLocation}. Thank you for shipping with us.`,
-      });
+        });
+      }
+      if (populatedLoad?.customer?.phone) {
+        await sendSMS({
+          to: populatedLoad.customer.phone,
+          body: `Your shipment ${load.ticketNumber} has been delivered! From: ${load.pickupLocation} To: ${load.deliveryLocation}. Thank you for shipping with us.`,
+        });
+      }
+    } catch (notifErr) {
+      console.error("POD notification error (non-fatal):", notifErr.message);
     }
 
     res.json({

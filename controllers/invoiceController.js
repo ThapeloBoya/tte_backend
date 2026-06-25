@@ -1,9 +1,12 @@
+const path = require("path");
 const Invoice = require("../models/Invoice");
 const Load = require("../models/Load");
 const Customer = require("../models/Customer");
 const Driver = require("../models/Driver");
 const { logAction } = require("../utils/auditLogger");
 const { notifyAdmins, notifySuperAdmin } = require("../utils/notify");
+const { generateInvoicePDF } = require("./generateInvoicePDF");
+const { sendEmail } = require("../utils/email");
 
 const generateInvoiceNumber = async () => {
   const year = new Date().getFullYear();
@@ -117,6 +120,26 @@ exports.createInvoice = async (req, res) => {
       .populate("customer", "name email phone")
       .populate("load", "ticketNumber");
 
+    const pdfUrl = await generateInvoicePDF(populated);
+    populated.pdfUrl = pdfUrl;
+    await Invoice.findByIdAndUpdate(invoice._id, { pdfUrl, status: "sent" });
+    populated.status = "sent";
+
+    const recipientEmail = billToData.email || populated.customer?.email;
+    if (recipientEmail) {
+      const pdfPath = path.join(__dirname, "..", pdfUrl);
+      await sendEmail({
+        to: recipientEmail,
+        subject: `Invoice ${invoice.invoiceNumber} from Moova Logistics`,
+        html: `<p>Dear ${billToData.name || "Valued Customer"},</p>
+<p>Please find attached your invoice <strong>${invoice.invoiceNumber}</strong> for <strong>R${(populated.total || 0).toFixed(2)}</strong>.</p>
+<p>Due Date: ${populated.dueDate ? new Date(populated.dueDate).toDateString() : "N/A"}</p>
+<p>If you have any questions, please contact us at info@moova.co.za or +27 11 225 2679.</p>
+<p>Thank you for choosing Moova Logistics.</p>`,
+        attachments: [{ filename: `${invoice.invoiceNumber}.pdf`, path: pdfPath }],
+      }).catch((err) => console.error("Invoice email send failed:", err.message));
+    }
+
     res.status(201).json(populated);
   } catch (err) {
     console.error(err);
@@ -193,6 +216,26 @@ exports.createInvoiceFromLoad = async (req, res) => {
       .populate("customer", "name email phone")
       .populate("load", "ticketNumber pickupLocation deliveryLocation")
       .populate("driver", "name email");
+
+    const pdfUrl = await generateInvoicePDF(populated);
+    populated.pdfUrl = pdfUrl;
+    await Invoice.findByIdAndUpdate(invoice._id, { pdfUrl, status: "sent" });
+    populated.status = "sent";
+
+    const recipientEmail = populated.customer?.email || populated.billTo?.email;
+    if (recipientEmail) {
+      const pdfPath = path.join(__dirname, "..", pdfUrl);
+      await sendEmail({
+        to: recipientEmail,
+        subject: `Invoice ${invoice.invoiceNumber} from Moova Logistics`,
+        html: `<p>Dear ${populated.billTo?.name || populated.customer?.name || "Valued Customer"},</p>
+<p>Please find attached your invoice <strong>${invoice.invoiceNumber}</strong> for <strong>R${(populated.total || 0).toFixed(2)}</strong>.</p>
+<p>Due Date: ${populated.dueDate ? new Date(populated.dueDate).toDateString() : "N/A"}</p>
+<p>If you have any questions, please contact us at info@moova.co.za or +27 11 225 2679.</p>
+<p>Thank you for choosing Moova Logistics.</p>`,
+        attachments: [{ filename: `${invoice.invoiceNumber}.pdf`, path: pdfPath }],
+      }).catch((err) => console.error("Invoice email send failed:", err.message));
+    }
 
     res.status(201).json(populated);
   } catch (err) {

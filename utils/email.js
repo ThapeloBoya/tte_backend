@@ -15,7 +15,7 @@ const getTransporter = () => {
   return null;
 };
 
-const sendEmail = async ({ to, subject, html }) => {
+const sendEmail = async ({ to, subject, html, attachments }) => {
   const transporter = getTransporter();
 
   if (!transporter) {
@@ -23,6 +23,7 @@ const sendEmail = async ({ to, subject, html }) => {
     console.log(`EMAIL TO: ${to}`);
     console.log(`SUBJECT: ${subject}`);
     console.log(`BODY:\n${html.replace(/<[^>]*>/g, "")}`);
+    if (attachments) console.log(`ATTACHMENTS: ${attachments.map(a => a.filename).join(", ")}`);
     console.log("==");
     console.log("No SMTP configured. Email logged to console.");
     return { messageId: "console-only" };
@@ -33,6 +34,7 @@ const sendEmail = async ({ to, subject, html }) => {
     to,
     subject,
     html,
+    attachments,
   });
 
   return info;

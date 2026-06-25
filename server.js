@@ -16,6 +16,7 @@ const { MongoStore } = require("connect-mongo");
 const passport = require("./config/passport");
 const swaggerJsdoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
+const { initSocket } = require("./utils/socket");
 
 dotenv.config();
 
@@ -118,6 +119,7 @@ app.use(sanitizeMiddleware());
 const io = new Server(server, {
   cors: { origin: corsCheck, credentials: true }
 });
+initSocket(io);
 
 app.set("io", io);
 
@@ -153,6 +155,15 @@ app.use("/api/users", require("./routes/users"));
 app.use("/api/admin2", require("./routes/admin2"));
 app.use("/api/superadmin", require("./routes/superadminRoutes"));
 app.use("/api/contact", require("./routes/contactRoutes"));
+app.use("/api/notifications", require("./routes/notificationRoutes"));
+app.use("/api/routes", require("./routes/routeRoutes"));
+app.use("/api/reports", require("./routes/reportRoutes"));
+app.use("/api/fuel", require("./routes/fuelRoutes"));
+app.use("/api/maintenance", require("./routes/maintenanceRoutes"));
+app.use("/api/invoices", require("./routes/invoiceRoutes"));
+app.use("/api/documents", require("./routes/documentRoutes"));
+app.use("/api/audit-logs", require("./routes/auditRoutes"));
+app.use("/api/track", require("./routes/trackRoutes"));
 
 // ---------------- HEALTH ----------------
 app.get("/api/health", (req, res) => {
