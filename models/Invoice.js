@@ -44,6 +44,7 @@ const invoiceSchema = new mongoose.Schema({
 
   notes: String,
   pdfUrl: { type: String },
+  paymentUrl: { type: String },
   paymentMethod: String,
   paymentReference: String,
 

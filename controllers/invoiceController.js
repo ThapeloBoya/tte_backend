@@ -7,6 +7,7 @@ const { logAction } = require("../utils/auditLogger");
 const { notifyAdmins, notifySuperAdmin } = require("../utils/notify");
 const { generateInvoicePDF } = require("./generateInvoicePDF");
 const { sendEmail } = require("../utils/email");
+const { getPaymentUrl } = require("../utils/payfast");
 
 const generateInvoiceNumber = async () => {
   const year = new Date().getFullYear();
@@ -122,7 +123,9 @@ exports.createInvoice = async (req, res) => {
 
     const pdfUrl = await generateInvoicePDF(populated);
     populated.pdfUrl = pdfUrl;
-    await Invoice.findByIdAndUpdate(invoice._id, { pdfUrl, status: "sent" });
+    const paymentUrl = getPaymentUrl(populated);
+    await Invoice.findByIdAndUpdate(invoice._id, { pdfUrl, paymentUrl, status: "sent" });
+    populated.paymentUrl = paymentUrl;
     populated.status = "sent";
 
     const recipientEmail = billToData.email || populated.customer?.email;
@@ -134,6 +137,7 @@ exports.createInvoice = async (req, res) => {
         html: `<p>Dear ${billToData.name || "Valued Customer"},</p>
 <p>Please find attached your invoice <strong>${invoice.invoiceNumber}</strong> for <strong>R${(populated.total || 0).toFixed(2)}</strong>.</p>
 <p>Due Date: ${populated.dueDate ? new Date(populated.dueDate).toDateString() : "N/A"}</p>
+<p style="margin: 24px 0;"><a href="${paymentUrl}" style="background:#003366;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold;display:inline-block;">Pay Now</a></p>
 <p>If you have any questions, please contact us at info@moova.co.za or +27 11 225 2679.</p>
 <p>Thank you for choosing Moova Logistics.</p>`,
         attachments: [{ filename: `${invoice.invoiceNumber}.pdf`, path: pdfPath }],
@@ -219,7 +223,9 @@ exports.createInvoiceFromLoad = async (req, res) => {
 
     const pdfUrl = await generateInvoicePDF(populated);
     populated.pdfUrl = pdfUrl;
-    await Invoice.findByIdAndUpdate(invoice._id, { pdfUrl, status: "sent" });
+    const paymentUrl = getPaymentUrl(populated);
+    await Invoice.findByIdAndUpdate(invoice._id, { pdfUrl, paymentUrl, status: "sent" });
+    populated.paymentUrl = paymentUrl;
     populated.status = "sent";
 
     const recipientEmail = populated.customer?.email || populated.billTo?.email;
@@ -231,6 +237,7 @@ exports.createInvoiceFromLoad = async (req, res) => {
         html: `<p>Dear ${populated.billTo?.name || populated.customer?.name || "Valued Customer"},</p>
 <p>Please find attached your invoice <strong>${invoice.invoiceNumber}</strong> for <strong>R${(populated.total || 0).toFixed(2)}</strong>.</p>
 <p>Due Date: ${populated.dueDate ? new Date(populated.dueDate).toDateString() : "N/A"}</p>
+<p style="margin: 24px 0;"><a href="${paymentUrl}" style="background:#003366;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold;display:inline-block;">Pay Now</a></p>
 <p>If you have any questions, please contact us at info@moova.co.za or +27 11 225 2679.</p>
 <p>Thank you for choosing Moova Logistics.</p>`,
         attachments: [{ filename: `${invoice.invoiceNumber}.pdf`, path: pdfPath }],

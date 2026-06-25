@@ -17,6 +17,7 @@ const passport = require("./config/passport");
 const swaggerJsdoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
 const { initSocket } = require("./utils/socket");
+const { initMaintenanceReminder } = require("./utils/maintenanceReminder");
 
 dotenv.config();
 
@@ -120,11 +121,17 @@ const io = new Server(server, {
   cors: { origin: corsCheck, credentials: true }
 });
 initSocket(io);
+initMaintenanceReminder();
 
 app.set("io", io);
 
 io.on("connection", (socket) => {
   console.log("Socket connected:", socket.id);
+
+  socket.on("register", ({ role, email }) => {
+    if (email) socket.join(`user:${email}`);
+    if (role) socket.join(`role:${role}`);
+  });
 
   socket.on("disconnect", () => {
     console.log("Socket disconnected:", socket.id);
@@ -164,6 +171,8 @@ app.use("/api/invoices", require("./routes/invoiceRoutes"));
 app.use("/api/documents", require("./routes/documentRoutes"));
 app.use("/api/audit-logs", require("./routes/auditRoutes"));
 app.use("/api/track", require("./routes/trackRoutes"));
+app.use("/api/chat", require("./routes/chatRoutes"));
+app.use("/api/payments", require("./routes/paymentRoutes"));
 
 // ---------------- HEALTH ----------------
 app.get("/api/health", (req, res) => {

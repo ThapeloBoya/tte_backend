@@ -93,6 +93,11 @@ const generateInvoicePDF = (invoice) => {
   doc.text(`Reference: ${invoice.invoiceNumber}`, col1, sy);
   doc.fontSize(8).font("Helvetica").fillColor(TEXT_MUTED);
   doc.text("Please quote the invoice number as reference.", col1 + 110, sy);
+  sy += 18;
+  doc.fontSize(9).fillColor(PRIMARY).font("Helvetica-Bold");
+  doc.text("Pay Online:", col1, sy);
+  doc.fontSize(8).font("Helvetica").fillColor(TEXT_MUTED);
+  doc.text("Use the Pay Now link in your email to pay via credit card or EFT.", col1 + 70, sy);
   sy += 24;
 
   if (invoice.notes) {

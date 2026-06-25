@@ -13,6 +13,8 @@ const truckSchema = new mongoose.Schema({
   status: { type: String, enum: ["available", "in service", "under maintenance"], default: "available" },
   insuranceExpiry: { type: Date },
   mileage: { type: Number, default: 0 },
+  nextServiceDate: { type: Date },
+  nextServiceMileage: { type: Number },
 
   // ✅ Make `type` optional to prevent validation error
   type: { type: String, default: "" } 
