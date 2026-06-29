@@ -1,4 +1,6 @@
 const nodemailer = require("nodemailer");
+const dns = require("dns");
+dns.setDefaultResultOrder("ipv4first");
 
 const getTransporter = () => {
   if (process.env.SMTP_HOST && process.env.SMTP_PORT) {
