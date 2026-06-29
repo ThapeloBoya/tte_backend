@@ -27,9 +27,11 @@ const sendViaSMTP = async ({ to, subject, html, attachments }) => {
 };
 
 // --- Brevo API (Render / production) ---
+const BREVO_SENDER = process.env.BREVO_SENDER_EMAIL || process.env.SMTP_FROM || "noreply@tms.com";
+
 const sendViaBrevo = async ({ to, subject, html, attachments }) => {
   const payload = {
-    sender: { email: process.env.SMTP_FROM || "noreply@tms.com" },
+    sender: { email: BREVO_SENDER },
     to: [{ email: to }],
     subject,
     htmlContent: html,
@@ -50,11 +52,7 @@ const sendViaBrevo = async ({ to, subject, html, attachments }) => {
 // --- unified send ---
 const sendEmail = async (opts) => {
   if (process.env.BREVO_API_KEY) {
-    try {
-      return await sendViaBrevo(opts);
-    } catch (err) {
-      console.error("Brevo send failed:", err.response?.data?.message || err.message);
-    }
+    return sendViaBrevo(opts);
   }
   return sendViaSMTP(opts);
 };

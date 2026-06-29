@@ -10,7 +10,7 @@ const checkMaintenanceReminders = async () => {
     const dueTrucks = await Truck.find({
       $or: [
         { nextServiceDate: { $lte: in7Days } },
-        { nextServiceMileage: { $ne: null }, mileage: { $gte: "$nextServiceMileage" } },
+        { nextServiceMileage: { $ne: null }, $expr: { $gte: ["$mileage", "$nextServiceMileage"] } },
       ],
     });
 
