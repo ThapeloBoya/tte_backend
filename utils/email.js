@@ -1,20 +1,21 @@
 const nodemailer = require("nodemailer");
 const dns = require("dns");
-dns.setDefaultResultOrder("ipv4first");
 
 const getTransporter = () => {
-  if (process.env.SMTP_HOST && process.env.SMTP_PORT) {
-    return nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT),
-      secure: process.env.SMTP_SECURE === "true",
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-  }
-  return null;
+  if (!process.env.SMTP_HOST || !process.env.SMTP_PORT) return null;
+
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT),
+    secure: process.env.SMTP_SECURE === "true",
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+    lookup: (hostname, options, cb) => {
+      dns.lookup(hostname, { ...options, family: 4 }, cb);
+    },
+  });
 };
 
 const sendEmail = async ({ to, subject, html, attachments }) => {
