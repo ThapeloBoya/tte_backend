@@ -73,6 +73,8 @@ exports.createLoad = async (req, res) => {
 <p>Track your shipment: <a href="${trackUrl}">${trackUrl}</a></p>
 <p>Enter your ticket number on the tracking page to see live updates.</p>`,
           });
+        } else {
+          console.log("Load email skipped: customer email missing for", createdLoad?.ticketNumber, "- customer:", createdLoad?.customer?._id);
         }
 
         if (createdLoad?.driver?.email) {
