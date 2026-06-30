@@ -39,6 +39,8 @@ const loadSchema = new mongoose.Schema({
   deliveryDate: { type: Date },
   deliveryDay: String,
   cargoType: String,
+  packages: Number,
+  weight: Number,
   priority: { type: String, enum: ["normal","high","urgent"], default: "normal" },
   customerRef: String,
   notes: String,

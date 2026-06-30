@@ -40,36 +40,16 @@ const buildPOD = (load, filename, filePath) => {
   doc.text(`Delivery: ${load.deliveryLocation || "-"}`, col1, sy);
   sy += 24;
 
-  const deliveries = load.deliveries || [];
-  const totalPackages = deliveries.length;
-  const totalWeight = deliveries.reduce((sum, d) => sum + (d.weight || 0), 0);
-
   sy = addSection(doc, "Load Details", sy, 24);
   doc.fontSize(10).fillColor(TEXT_DARK);
-  doc.text(`Packages: ${totalPackages}`, col1, sy);
-  doc.text(`Total Weight: ${totalWeight} kg`, col2, sy);
+  doc.text(`Packages: ${load.packages || "-"}`, col1, sy);
+  doc.text(`Total Weight: ${load.weight ? `${load.weight} kg` : "-"}`, col2, sy);
   sy += 18;
   if (load.notes) {
     doc.text(`Notes: ${load.notes}`, col1, sy);
     sy += 20;
   }
   sy += 6;
-
-  if (deliveries.length > 0) {
-    const startX = 50;
-    const colWidths = [30, 120, 80, 80, 110];
-    sy = addTableHeader(doc, ["#", "Delivery #", "Amount", "Weight (kg)", "Status"], startX, colWidths, sy);
-    deliveries.forEach((item, i) => {
-      sy = addTableRow(doc, [
-        `${i + 1}`,
-        item.deliveryNumber || "-",
-        item.amount ? `R${item.amount}` : "-",
-        item.weight ? `${item.weight}` : "-",
-        item.status || "-",
-      ], startX, colWidths, sy, i % 2 === 1);
-    });
-    sy += 10;
-  }
 
   sy = addSection(doc, "Signatures", sy, 24);
   const driverEmail = load.driver?.email || "____________________";
@@ -84,7 +64,7 @@ const buildPOD = (load, filename, filePath) => {
   sy += 20;
 
   if (load.signatureUrl) {
-    const sigPath = path.join(__dirname, "..", load.signatureUrl);
+    const sigPath = path.join(__dirname, "..", "uploads", path.basename(load.signatureUrl));
     if (fs.existsSync(sigPath)) {
       doc.fontSize(10).font("Helvetica-Bold").fillColor(PRIMARY).text("Receiver Signature:", col1, sy);
       sy += 16;
@@ -94,7 +74,7 @@ const buildPOD = (load, filename, filePath) => {
   }
 
   if (load.capturedPhotoUrl) {
-    const photoPath = path.join(__dirname, "..", load.capturedPhotoUrl);
+    const photoPath = path.join(__dirname, "..", "uploads", path.basename(load.capturedPhotoUrl));
     if (fs.existsSync(photoPath)) {
       if (sy > doc.page.height - 200) {
         doc.addPage();

@@ -27,12 +27,15 @@ exports.createLoad = async (req, res) => {
       deliveryLocation,
       deliveryDay,
       cargoType,
+      packages,
       priority,
       customerRef,
       notes,
       status,
       weight,
     } = req.body;
+
+    const numWeight = weight ? Number(weight) : undefined;
 
     const load = await Load.create({
       customer,
@@ -44,11 +47,13 @@ exports.createLoad = async (req, res) => {
       deliveryLocation,
       deliveryDay,
       cargoType,
+      packages: packages ? Number(packages) : undefined,
       priority: priority || "normal",
       customerRef,
       notes,
       status: status || (driver ? "assigned" : "waiting"),
-      weight: weight ? Number(weight) : undefined,
+      weight: numWeight,
+      deliveries: numWeight ? [{ weight: numWeight, status: "checked" }] : undefined,
     });
 
     await logAction({
@@ -491,7 +496,7 @@ exports.bulkDeleteLoads = async (req, res) => {
 // Create load by driver
 exports.createLoadByDriver = async (req, res) => {
   try {
-    const { pickupLocation, deliveryLocation, truck, weight, cargoType, notes, customer, driverEmail } = req.body;
+    const { pickupLocation, deliveryLocation, truck, weight, packages, cargoType, notes, customer, driverEmail } = req.body;
 
     if (!customer) return res.status(400).json({ message: "Customer is required" });
     if (!driverEmail) return res.status(400).json({ message: "Driver email is required" });
@@ -508,6 +513,7 @@ exports.createLoadByDriver = async (req, res) => {
       deliveryLocation,
       truck: truck || undefined,
       weight: weight ? Number(weight) : undefined,
+      packages: packages ? Number(packages) : undefined,
       cargoType,
       notes,
       status: "waiting",
