@@ -26,7 +26,6 @@ exports.getTrackByTicket = async (req, res) => {
       driver: load.driver ? { name: load.driver.name, phone: load.driver.phone } : null,
       truck: load.truck?.registrationNumber || null,
       milestones: load.milestones || {},
-      podUrl: load.podUrl || null,
       isApproved: load.isApproved || false,
     });
   } catch (err) {

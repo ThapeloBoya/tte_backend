@@ -150,6 +150,36 @@ router.patch("/:id", protect, authorize("driver"), async (req, res) => {
       }
     }
 
+    if (status === "completed" && load._id) {
+      await notifyAdmins({
+        title: "Load Completed",
+        message: `Driver ${req.user.name} marked load ${load.ticketNumber} as completed`,
+        entity: "Load", entityId: load._id, action: "status_updated",
+      });
+      try {
+        if (populatedLoad?.customer?.email) {
+          await sendEmail({
+            to: populatedLoad.customer.email,
+            subject: `Your shipment ${load.ticketNumber} has been delivered`,
+            html: `<p>Hi ${populatedLoad.customer.name},</p>
+<p>Your shipment <strong>${load.ticketNumber}</strong> has been delivered.</p>
+<p><strong>From:</strong> ${load.pickupLocation}</p>
+<p><strong>To:</strong> ${load.deliveryLocation}</p>
+<p>Track your shipment: <a href="${process.env.FRONTEND_URL || "http://localhost:3000"}/track/${load.ticketNumber}">${process.env.FRONTEND_URL || "http://localhost:3000"}/track/${load.ticketNumber}</a></p>
+<p>Thank you for shipping with us.</p>`,
+          });
+        }
+        if (populatedLoad?.customer?.phone) {
+          await sendSMS({
+            to: populatedLoad.customer.phone,
+            body: `Your shipment ${load.ticketNumber} has been delivered! Track: ${process.env.FRONTEND_URL || "http://localhost:3000"}/track/${load.ticketNumber}. Thank you for shipping with us.`,
+          });
+        }
+      } catch (notifErr) {
+        console.error("Completion notification error (non-fatal):", notifErr.message);
+      }
+    }
+
     const io = getIO();
     if (io) io.emit("loadUpdated", populatedLoad);
 
