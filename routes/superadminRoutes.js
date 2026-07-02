@@ -10,9 +10,9 @@ const {
 
 // ✅ Make sure these functions exist and are exported from superadminController
 
-router.get("/loads", protect, authorize("superadmin"), getAllLoads);
-router.get("/loads/:id", protect, authorize("superadmin"), getLoadById);
-router.put("/loads/:id", protect, authorize("superadmin"), updateLoad);
+router.get("/loads", protect, authorize("superadmin", "admin1"), getAllLoads);
+router.get("/loads/:id", protect, authorize("superadmin", "admin1"), getLoadById);
+router.put("/loads/:id", protect, authorize("superadmin", "admin1"), updateLoad);
 
 module.exports = router;
 

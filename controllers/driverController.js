@@ -287,4 +287,94 @@ exports.getDriverProfile = async (req, res) => {
   }
 };
 
+exports.updateDutyStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!["available", "on-duty", "inactive"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status. Use: available, on-duty, or inactive" });
+    }
+
+    const driver = await ensureDriverProfile(req.user);
+    if (!driver) return res.status(404).json({ message: "Driver not found" });
+
+    driver.status = status;
+    driver.lastUpdated = new Date();
+    await driver.save();
+
+    const io = getIO();
+    if (io) io.emit("driverUpdated", driver);
+
+    res.json({ message: `Status updated to ${status}`, status: driver.status });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.getMyTruck = async (req, res) => {
+  try {
+    const Load = require("../models/Load");
+    const Truck = require("../models/Truck");
+    const Maintenance = require("../models/Maintenance");
+
+    const driver = await ensureDriverProfile(req.user);
+    if (!driver) return res.status(404).json({ message: "Driver not found" });
+
+    const activeLoad = await Load.findOne({ driver: driver._id, status: { $in: ["assigned", "in transit"] } })
+      .populate("truck")
+      .sort({ createdAt: -1 });
+
+    if (!activeLoad || !activeLoad.truck) {
+      return res.json({ truck: null, message: "No truck assigned" });
+    }
+
+    const truck = activeLoad.truck;
+
+    const [maintenanceRecords] = await Promise.all([
+      Maintenance.find({ truck: truck._id, status: { $ne: "completed" } })
+        .sort({ scheduledDate: 1 })
+        .limit(5)
+        .lean(),
+    ]);
+
+    const alerts = [];
+    if (truck.insuranceExpiry) {
+      const daysToExpiry = Math.ceil((new Date(truck.insuranceExpiry) - new Date()) / (1000 * 60 * 60 * 24));
+      if (daysToExpiry <= 30) alerts.push({ type: "warning", message: `Insurance expires in ${daysToExpiry} days` });
+      if (daysToExpiry <= 0) alerts.push({ type: "danger", message: "Insurance has expired" });
+    }
+    if (truck.nextServiceDate) {
+      const daysToService = Math.ceil((new Date(truck.nextServiceDate) - new Date()) / (1000 * 60 * 60 * 24));
+      if (daysToService <= 14) alerts.push({ type: "warning", message: `Service due in ${daysToService} days` });
+    }
+    if (truck.nextServiceMileage && truck.mileage) {
+      const milesUntilService = truck.nextServiceMileage - truck.mileage;
+      if (milesUntilService <= 500 && milesUntilService > 0) alerts.push({ type: "info", message: `Service due in ${milesUntilService} km` });
+    }
+
+    res.json({ truck, maintenance: maintenanceRecords, alerts });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.getMyDocuments = async (req, res) => {
+  try {
+    const Document = require("../models/Document");
+    const driver = await ensureDriverProfile(req.user);
+    if (!driver) return res.status(404).json({ message: "Driver not found" });
+
+    const docs = await Document.find({
+      entityType: "driver",
+      entityId: driver._id,
+    }).sort({ createdAt: -1 }).lean();
+
+    res.json({ documents: docs });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 

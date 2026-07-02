@@ -24,8 +24,8 @@ async function createUsers() {
     } else {
       const salt = await bcrypt.genSalt(12);
       const hashedPassword = await bcrypt.hash(password, salt);
-      await User.create({ name, email, password: hashedPassword, role: "superadmin" });
-      console.log(`Created super admin: ${email}`);
+      await User.create({ name, email, password: hashedPassword, role: "admin1" });
+      console.log(`Created admin: ${email}`);
     }
 
     console.log("Done!");

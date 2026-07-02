@@ -9,6 +9,7 @@ const {
   updateLoad,
   deleteLoad,
   resolveLoadIssue,
+  rejectLoadIssue,
   bulkUpdateStatus,
   bulkAssignDriver,
   bulkDeleteLoads,
@@ -35,8 +36,9 @@ router.post("/:id/generate-pod", protect, authorize("admin1", "superadmin"), gen
 // Upload POD (driver, admin2, superadmin)
 router.post("/:id/pod", protect, authorize("driver", "admin2", "superadmin"), uploadPOD);
 
-// Resolve driver issue (admin1 only)
-router.patch("/:id/resolve-issue", protect, authorize("admin1","superadmin"), resolveLoadIssue);
+// Resolve driver issue (admin2 / superadmin)
+router.patch("/:id/resolve-issue", protect, authorize("admin2", "superadmin"), resolveLoadIssue);
+router.patch("/:id/reject-issue", protect, authorize("admin2", "superadmin"), rejectLoadIssue);
 
 // CRUD routes last (generic ones)
 router.post("/", protect, authorize("admin1","superadmin"), createLoad);

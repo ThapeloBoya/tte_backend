@@ -23,6 +23,6 @@ router.post("/from-load", authorize("admin1"), createInvoiceFromLoad);
 router.patch("/:id", authorize("admin1"), updateInvoice);
 router.patch("/:id/paid", authorize("admin1"), markAsPaid);
 router.patch("/:id/cancel", authorize("admin1"), cancelInvoice);
-router.delete("/:id", authorize("superadmin"), deleteInvoice);
+router.delete("/:id", authorize("superadmin", "admin1"), deleteInvoice);
 
 module.exports = router;

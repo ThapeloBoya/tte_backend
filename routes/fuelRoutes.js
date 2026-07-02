@@ -17,6 +17,6 @@ router.get("/", authorize("superadmin", "admin1", "admin2"), getRecords);
 router.get("/:id", authorize("superadmin", "admin1", "admin2"), getRecordById);
 router.post("/", authorize("admin1"), createRecord);
 router.patch("/:id", authorize("admin1"), updateRecord);
-router.delete("/:id", authorize("superadmin"), deleteRecord);
+router.delete("/:id", authorize("superadmin", "admin1"), deleteRecord);
 
 module.exports = router;

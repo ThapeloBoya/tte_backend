@@ -99,7 +99,7 @@ exports.createInvoice = async (req, res) => {
       taxAmount: Math.round(taxAmount * 100) / 100,
       discount: discount || 0,
       total: Math.round(total * 100) / 100,
-      currency: currency || "USD",
+      currency: currency || "ZAR",
       dueDate: new Date(dueDate),
       notes,
       status: status || "draft",

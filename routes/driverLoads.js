@@ -310,6 +310,127 @@ router.post("/:id/photo", protect, authorize("driver"), async (req, res) => {
   }
 });
 
+// PATCH /api/driver-loads/:id/stops/:stopIndex — check in/out at a stop
+router.patch("/:id/stops/:stopIndex", protect, authorize("driver"), async (req, res) => {
+  try {
+    const driver = await ensureDriverProfile(req.user);
+    if (!driver) return res.status(404).json({ message: "Driver not found" });
+
+    const load = await Load.findOne({ _id: req.params.id, driver: driver._id });
+    if (!load) return res.status(404).json({ message: "Load not found" });
+
+    const stopIndex = parseInt(req.params.stopIndex);
+    if (stopIndex < 0 || stopIndex >= (load.stops || []).length) {
+      return res.status(400).json({ message: "Invalid stop index" });
+    }
+
+    const { action } = req.body; // "arrive" or "depart"
+    const stop = load.stops[stopIndex];
+
+    if (action === "arrive") {
+      stop.arrivedAt = stop.arrivedAt || new Date();
+    } else if (action === "depart") {
+      stop.departedAt = new Date();
+    } else {
+      return res.status(400).json({ message: "Invalid action. Use 'arrive' or 'depart'" });
+    }
+
+    load.markModified("stops");
+    await load.save();
+
+    const populatedLoad = await Load.findById(load._id)
+      .populate("customer", "name email phone address")
+      .populate("truck", "registrationNumber")
+      .populate("driver", "email name");
+
+    res.json(populatedLoad);
+  } catch (err) {
+    console.error("Error updating stop:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// PATCH /api/driver-loads/:id/deliveries/:deliveryIndex — mark delivery item as delivered
+router.patch("/:id/deliveries/:deliveryIndex", protect, authorize("driver"), async (req, res) => {
+  try {
+    const driver = await ensureDriverProfile(req.user);
+    if (!driver) return res.status(404).json({ message: "Driver not found" });
+
+    const load = await Load.findOne({ _id: req.params.id, driver: driver._id });
+    if (!load) return res.status(404).json({ message: "Load not found" });
+
+    const deliveryIndex = parseInt(req.params.deliveryIndex);
+    if (deliveryIndex < 0 || deliveryIndex >= (load.deliveries || []).length) {
+      return res.status(400).json({ message: "Invalid delivery index" });
+    }
+
+    load.deliveries[deliveryIndex].status = "delivered";
+    load.markModified("deliveries");
+    await load.save();
+
+    const populatedLoad = await Load.findById(load._id)
+      .populate("customer", "name email phone address")
+      .populate("truck", "registrationNumber")
+      .populate("driver", "email name");
+
+    res.json(populatedLoad);
+  } catch (err) {
+    console.error("Error updating delivery:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// POST /api/driver-loads/fuel — driver logs fuel for their current truck
+router.post("/fuel", protect, authorize("driver"), async (req, res) => {
+  try {
+    const driver = await ensureDriverProfile(req.user);
+    if (!driver) return res.status(404).json({ message: "Driver not found" });
+
+    const Load = require("../models/Load");
+    const Fuel = require("../models/Fuel");
+    const Truck = require("../models/Truck");
+
+    const activeLoad = await Load.findOne({ driver: driver._id, status: "in transit" })
+      .populate("truck")
+      .sort({ createdAt: -1 });
+
+    if (!activeLoad || !activeLoad.truck) {
+      return res.status(400).json({ message: "No active load with an assigned truck" });
+    }
+
+    const { liters, costPerLiter, vendor, fuelType, notes, mileage } = req.body;
+    if (!liters || !costPerLiter) {
+      return res.status(400).json({ message: "Liters and cost per liter are required" });
+    }
+
+    const totalCost = Number(liters) * Number(costPerLiter);
+
+    const record = await Fuel.create({
+      truck: activeLoad.truck._id,
+      date: new Date(),
+      liters: Number(liters),
+      costPerLiter: Number(costPerLiter),
+      totalCost,
+      mileage: mileage ? Number(mileage) : undefined,
+      vendor: vendor || "",
+      fuelType: fuelType || "diesel",
+      notes: notes || "",
+      createdBy: req.user.email,
+    });
+
+    await logAction({
+      action: "fuel_logged", entity: "Fuel", entityId: record._id, req,
+      details: `Driver ${req.user.name} logged ${liters}L for ${activeLoad.truck.registrationNumber}`,
+    });
+
+    const populated = await Fuel.findById(record._id).populate("truck", "registrationNumber model make fuelType");
+    res.status(201).json(populated);
+  } catch (err) {
+    console.error("Error logging fuel:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 router.post("/:id/signature", protect, authorize("driver"), async (req, res) => {
   try {
     if (!req.files || !req.files.signature) {

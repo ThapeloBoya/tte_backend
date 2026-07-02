@@ -30,7 +30,7 @@ const invoiceSchema = new mongoose.Schema({
   discount: { type: Number, default: 0 },
   total: { type: Number, required: true },
 
-  currency: { type: String, default: "USD" },
+  currency: { type: String, default: "ZAR" },
 
   status: {
     type: String,

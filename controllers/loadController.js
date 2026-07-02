@@ -88,6 +88,21 @@ exports.createLoad = async (req, res) => {
             message: `Load ${createdLoad.ticketNumber} assigned to you — ${createdLoad.pickupLocation} to ${createdLoad.deliveryLocation}`,
             entity: "Load", entityId: load._id, action: "assigned",
           });
+
+          try {
+            await sendEmail({
+              to: createdLoad.driver.email,
+              subject: `New load assigned — ${createdLoad.ticketNumber}`,
+              html: `<p>Hi ${createdLoad.driver.name || "Driver"},</p>
+<p>A new load has been assigned to you.</p>
+<p><strong>Ticket:</strong> ${createdLoad.ticketNumber}</p>
+<p><strong>From:</strong> ${createdLoad.pickupLocation}</p>
+<p><strong>To:</strong> ${createdLoad.deliveryLocation}</p>
+<p>Please log in to the driver portal to view details and start your trip.</p>`,
+            });
+          } catch (e) {
+            console.error("Non-fatal email error to driver:", e.message);
+          }
         }
 
         if (createdLoad?.driver?.phone) {
@@ -201,6 +216,21 @@ exports.updateLoad = async (req, res) => {
             message: `Load ${populatedLoad.ticketNumber} assigned to you — ${populatedLoad.pickupLocation} to ${populatedLoad.deliveryLocation}`,
             entity: "Load", entityId: load._id, action: "assigned",
           });
+
+          try {
+            await sendEmail({
+              to: populatedLoad.driver.email,
+              subject: `New load assigned — ${populatedLoad.ticketNumber}`,
+              html: `<p>Hi ${populatedLoad.driver.name || "Driver"},</p>
+<p>A new load has been assigned to you.</p>
+<p><strong>Ticket:</strong> ${populatedLoad.ticketNumber}</p>
+<p><strong>From:</strong> ${populatedLoad.pickupLocation}</p>
+<p><strong>To:</strong> ${populatedLoad.deliveryLocation}</p>
+<p>Please log in to the driver portal to view details and start your trip.</p>`,
+            });
+          } catch (e) {
+            console.error("Non-fatal email error to driver:", e.message);
+          }
         }
         if (req.body.driver && populatedLoad?.driver?.phone) {
           await sendWhatsApp({
@@ -380,6 +410,50 @@ exports.resolveLoadIssue = async (req, res) => {
   }
 };
 
+exports.rejectLoadIssue = async (req, res) => {
+  try {
+    const load = await Load.findById(req.params.id);
+    if (!load) return res.status(404).json({ message: "Load not found" });
+    if (!load.driverIssue?.description) return res.status(400).json({ message: "No issue reported on this load" });
+    if (load.driverIssue.status !== "open") return res.status(400).json({ message: "Can only reject open issues" });
+
+    const { reason } = req.body;
+
+    load.driverIssue.status = "rejected";
+    load.driverIssue.resolutionNote = reason || "";
+    load.driverIssue.resolvedAt = new Date();
+    load.driverIssue.resolvedBy = req.user?.email;
+    load.updatedBy = req.user?.email;
+    await load.save();
+
+    const populatedLoad = await Load.findById(load._id)
+      .populate("driver", "name email")
+      .populate("truck", "registrationNumber")
+      .populate("customer", "name");
+
+    await logAction({
+      action: "rejected_issue", entity: "Load", entityId: load._id, req,
+      details: `Rejected issue on load ${load.ticketNumber} — ${load.driverIssue?.type}`,
+    });
+
+    if (populatedLoad?.driver?.email) {
+      await notifyDriver(populatedLoad.driver.email, {
+        title: "Issue Rejected",
+        message: `The issue on load ${populatedLoad.ticketNumber} was not accepted by ${req.user.name}. Reason: ${reason || "Not specified"}.`,
+        entity: "Load", entityId: load._id, action: "rejected_issue",
+      });
+    }
+
+    const io = getIO();
+    if (io) io.emit("loadUpdated", populatedLoad);
+
+    res.json(populatedLoad);
+  } catch (err) {
+    console.error("Error rejecting load issue:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 // --- BULK UPDATE STATUS ---
 exports.bulkUpdateStatus = async (req, res) => {
   try {
@@ -442,8 +516,26 @@ exports.bulkAssignDriver = async (req, res) => {
               });
             }
           }
+          if (driver?.email) {
+            for (const load of assignedLoads) {
+              try {
+                await sendEmail({
+                  to: driver.email,
+                  subject: `New load assigned — ${load.ticketNumber}`,
+                  html: `<p>Hi ${driver.name || "Driver"},</p>
+<p>A new load has been assigned to you.</p>
+<p><strong>Ticket:</strong> ${load.ticketNumber}</p>
+<p><strong>From:</strong> ${load.pickupLocation}</p>
+<p><strong>To:</strong> ${load.deliveryLocation}</p>
+<p>Please log in to the driver portal to view details and start your trip.</p>`,
+                });
+              } catch (e) {
+                console.error("Non-fatal bulk assign email error:", e.message);
+              }
+            }
+          }
+
           if (driver?.phone) {
-            const assignedLoads = await Load.find({ _id: { $in: ids } }).select("ticketNumber pickupLocation deliveryLocation").lean();
             for (const load of assignedLoads) {
               await sendWhatsApp({
                 to: driver.phone,

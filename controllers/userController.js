@@ -40,7 +40,7 @@ exports.createUser = async (req, res) => {
 
     await logAction({
       action: "createUser", entity: "User", entityId: user._id, req,
-      details: `Super admin ${req.user.email} created user ${user.email} as ${user.role}`,
+      details: `Admin ${req.user.email} created user ${user.email} as ${user.role}`,
     });
 
     res.status(201).json({
@@ -65,8 +65,8 @@ exports.updateUser = async (req, res) => {
 
     if (role !== undefined) {
       if (!VALID_ROLES.includes(role)) return res.status(400).json({ message: "Invalid role" });
-      if (user._id.toString() === req.user._id.toString() && role !== "superadmin") {
-        return res.status(400).json({ message: "Cannot demote yourself" });
+      if (user._id.toString() === req.user._id.toString() && role !== req.user.role) {
+        return res.status(400).json({ message: "Cannot change your own role" });
       }
       user.role = role;
     }
@@ -85,7 +85,7 @@ exports.updateUser = async (req, res) => {
 
     await logAction({
       action: "updateUser", entity: "User", entityId: user._id, req,
-      details: `Super admin ${req.user.email} updated user ${user.email}`,
+      details: `Admin ${req.user.email} updated user ${user.email}`,
     });
 
     res.json({ _id: user._id, name: user.name, email: user.email, role: user.role, isActive: user.isActive });
@@ -109,7 +109,7 @@ exports.deactivateUser = async (req, res) => {
 
     await logAction({
       action: "deactivateUser", entity: "User", entityId: user._id, req,
-      details: `Super admin ${req.user.email} deactivated user ${user.email}`,
+      details: `Admin ${req.user.email} deactivated user ${user.email}`,
     });
 
     res.json({ message: "User deactivated" });

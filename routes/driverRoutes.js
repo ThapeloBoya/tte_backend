@@ -11,6 +11,9 @@ router.put("/:id", protect, authorize("admin1", "superadmin"), validateDriverUpd
 router.get("/profile", protect, authorize("driver"), driverController.getDriverProfile);
 router.patch("/profile", protect, authorize("driver"), driverController.updateDriverProfile);
 router.patch("/location", protect, authorize("driver"), driverController.updateDriverLocation);
+router.patch("/duty-status", protect, authorize("driver"), driverController.updateDutyStatus);
+router.get("/my-truck", protect, authorize("driver"), driverController.getMyTruck);
+router.get("/my-documents", protect, authorize("driver"), driverController.getMyDocuments);
 router.delete("/:id", protect, authorize("admin1", "superadmin"), driverController.deleteDriver);
 
 module.exports = router;
